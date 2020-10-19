@@ -1,14 +1,14 @@
 package com.miro.widget.controller;
 
+import com.miro.widget.dto.PagedWidgetResponseDTO;
 import com.miro.widget.dto.WidgetRequestDTO;
 import com.miro.widget.dto.WidgetResponseDTO;
-import com.miro.widget.model.Widget;
 import com.miro.widget.repository.WidgetRepository;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.Collection;
-import java.util.stream.Collectors;
+
+import static com.miro.widget.util.PageUtil.getPagedResponse;
 
 
 @RestController
@@ -37,8 +37,9 @@ public class WidgetController {
     }
 
     @GetMapping
-    public Collection<WidgetResponseDTO> getWidgets() {
-        return widgetRepository.getAllWidgets().stream().map(Widget::toResponseDTO).collect(Collectors.toList());
+    public PagedWidgetResponseDTO getAllWidgets(@RequestParam(value = "page") int page,
+                                             @RequestParam(value = "limit", required = false, defaultValue = "10") int size) {
+        return getPagedResponse(page, size, widgetRepository.getAllWidgets());
     }
 
     @DeleteMapping("/{id}")
