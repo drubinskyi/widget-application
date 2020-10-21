@@ -133,26 +133,25 @@ public class WidgetRepository {
     private void updateStorageAndIndexWithShift(Widget widget) {
         int zIndex = widget.getZIndex();
 
-        List<Map.Entry<Integer, UUID>> entryList = StreamUtils.zipWithIndex(index.tailMap(zIndex).entrySet().stream())
+        List<Map.Entry<Integer, UUID>> entryList = StreamUtils.zipWithIndex(index.tailMap(widget.getZIndex()).entrySet().stream())
                 .takeWhile(entryIndexed -> entryIndexed.getIndex() + zIndex == entryIndexed.getValue().getKey())
                 .map(Indexed::getValue)
                 .collect(Collectors.toList());
 
         int shiftedValue = entryList.get(entryList.size() - 1).getKey() + 1;
-        index.put(shiftedValue, null);
-        entryList.add(index.entrySet().stream().filter(it -> it.getKey() == shiftedValue).findFirst().get());
 
         UUID newValue = widget.getId();
-        int i = 0;
-        do {
-            Map.Entry<Integer, UUID> entry = entryList.get(i);
+        Widget oldWidget = null;
+        for (Map.Entry<Integer, UUID> entry : entryList) {
             UUID tmp = entry.getValue();
             entry.setValue(newValue);
             newValue = tmp;
 
-            Widget oldWidget = storage.get(entry.getValue());
+            oldWidget = storage.get(entry.getValue());
             storage.put(entry.getValue(), oldWidget.updateZIndex(entry.getKey()));
-            i++;
-        } while (newValue != null);
+        }
+
+        index.put(shiftedValue, newValue);
+        storage.put(newValue, oldWidget.updateZIndex(shiftedValue));
     }
 }
