@@ -66,6 +66,8 @@ public class WidgetRepositoryTest {
         IntStream.range(lowestZIndex, highestZIndex).forEach(i ->
                 Assertions.assertEquals(storage.get(index.get(i)).getZIndex(), i)
         );
+
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
     }
 
     private static Stream<Arguments> valuesForTestAddWithoutBreaks() {
@@ -119,10 +121,12 @@ public class WidgetRepositoryTest {
         }
 
         IntStream.range(lowestZIndex, highestZIndex + delta).forEach(i -> {
-            if(index.get(i) != null) {
+            if (index.get(i) != null) {
                 Assertions.assertEquals(storage.get(index.get(i)).getZIndex(), i);
             }
         });
+
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
     }
 
     //For testing purposes ZIndex should not exceed the highestZIndex value by more than 5

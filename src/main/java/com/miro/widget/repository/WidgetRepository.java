@@ -143,17 +143,17 @@ public class WidgetRepository {
 
         // Updating storage and index with new values
         UUID newValue = widget.getId();
-        Widget oldWidget = null;
         for (Map.Entry<Integer, UUID> entry : entryList) {
             UUID tmp = entry.getValue();
             entry.setValue(newValue);
             newValue = tmp;
 
-            oldWidget = storage.get(entry.getValue());
+            Widget oldWidget = storage.get(entry.getValue());
             storage.put(entry.getValue(), oldWidget.updateZIndex(entry.getKey()));
         }
         // Adding the value to the index and storage, which was obtained as a result of the shift
         index.put(headShiftedValue, newValue);
-        storage.put(newValue, oldWidget.updateZIndex(headShiftedValue));
+        Widget headWidget = storage.get(newValue);
+        storage.put(newValue, headWidget.updateZIndex(headShiftedValue));
     }
 }
