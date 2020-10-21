@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
+import static com.miro.widget.dto.WidgetResponseDTO.fromWidget;
 import static com.miro.widget.util.PageUtil.getPagedResponse;
 
 
@@ -23,17 +24,17 @@ public class WidgetController {
 
     @PostMapping
     public WidgetResponseDTO createWidget(@Valid @RequestBody WidgetRequestDTO widgetRequestDTO) {
-        return widgetRepository.addWidget(widgetRequestDTO).toResponseDTO();
+        return fromWidget(widgetRepository.addWidget(widgetRequestDTO.toWidget()));
     }
 
     @PutMapping("/{id}")
     public WidgetResponseDTO updateWidget(@PathVariable String id, @Valid @RequestBody WidgetRequestDTO widgetRequestDTO) {
-        return widgetRepository.updateWidget(id, widgetRequestDTO).toResponseDTO();
+        return fromWidget(widgetRepository.updateWidget(id, widgetRequestDTO.toWidget()));
     }
 
     @GetMapping("/{id}")
     public WidgetResponseDTO getWidget(@PathVariable String id) {
-        return widgetRepository.getWidget(id).toResponseDTO();
+        return fromWidget(widgetRepository.getWidget(id));
     }
 
     @GetMapping

@@ -2,7 +2,6 @@ package com.miro.widget.repository;
 
 import com.codepoetics.protonpack.Indexed;
 import com.codepoetics.protonpack.StreamUtils;
-import com.miro.widget.dto.WidgetRequestDTO;
 import com.miro.widget.error.WidgetNotFoundException;
 import com.miro.widget.model.Widget;
 import org.springframework.stereotype.Repository;
@@ -11,18 +10,16 @@ import java.util.*;
 import java.util.concurrent.locks.StampedLock;
 import java.util.stream.Collectors;
 
-import static com.miro.widget.model.Widget.fromRequestDTO;
-
 @Repository
 public class WidgetRepository {
     private Map<UUID, Widget> storage = new HashMap<>();
     private TreeMap<Integer, UUID> index = new TreeMap<>();
     private StampedLock lock = new StampedLock();
 
-    public Widget addWidget(WidgetRequestDTO widgetRequestDTO) {
+    public Widget addWidget(Widget newWidget) {
         long stamp = lock.writeLock();
         try {
-            Integer zIndex = widgetRequestDTO.getZIndex();
+            Integer zIndex = newWidget.getZIndex();
             if (zIndex == null) {
                 if (index.size() > 0) {
                     zIndex = index.lastKey() + 1;
@@ -31,8 +28,8 @@ public class WidgetRepository {
                 }
             }
 
-            Widget widget = fromRequestDTO(widgetRequestDTO, zIndex);
-            updateStorageAndIndex(widget.getId(), zIndex, widget);
+            Widget widget = newWidget.updateZIndex(zIndex);
+            updateStorageAndIndex(widget);
 
             return storage.get(widget.getId());
         } finally {
@@ -40,7 +37,7 @@ public class WidgetRepository {
         }
     }
 
-    public Widget updateWidget(String widgetId, WidgetRequestDTO widgetRequestDTO) {
+    public Widget updateWidget(String widgetId, Widget newWidget) {
         long stamp = lock.writeLock();
         try {
             UUID id = UUID.fromString(widgetId);
@@ -48,18 +45,21 @@ public class WidgetRepository {
             if (oldWidget == null) {
                 throw new WidgetNotFoundException(widgetId);
             }
-            Integer oldZIndex = oldWidget.getZIndex();
-            Integer newZIndex = widgetRequestDTO.getZIndex();
 
-            Widget newWidget = oldWidget.updateWidget(widgetRequestDTO, newZIndex);
+            Integer oldZIndex = oldWidget.getZIndex();
+            Integer newZIndex = newWidget.getZIndex();
+            if (newZIndex == null) {
+                newZIndex = index.lastKey() + 1;
+                newWidget.updateZIndex(newZIndex);
+            }
+
+            Widget widget = newWidget.updateId(id);
+
             if (!oldZIndex.equals(newZIndex)) {
-                if (widgetRequestDTO.getZIndex() == null) {
-                    newZIndex = index.lastKey() + 1;
-                }
                 index.remove(oldZIndex);
-                updateStorageAndIndex(id, newZIndex, newWidget);
+                updateStorageAndIndex(widget);
             } else {
-                storage.put(id, newWidget);
+                storage.put(id, widget);
             }
 
             return storage.get(id);
@@ -76,9 +76,9 @@ public class WidgetRepository {
             if (widget == null) {
                 throw new WidgetNotFoundException(widgetId);
             }
-            Integer zIndex = widget.getZIndex();
+
             storage.remove(id);
-            index.remove(zIndex);
+            index.remove(widget.getZIndex());
         } finally {
             lock.unlockWrite(stamp);
         }
@@ -121,54 +121,38 @@ public class WidgetRepository {
         return result;
     }
 
-    private void updateStorageAndIndex(UUID id, Integer zIndex, Widget widget) {
-        storage.put(id, widget);
-        if (index.get(zIndex) == null) {
-            index.put(zIndex, id);
+    private void updateStorageAndIndex(Widget widget) {
+        storage.put(widget.getId(), widget);
+        if (index.get(widget.getZIndex()) == null) {
+            index.put(widget.getZIndex(), widget.getId());
         } else {
-            updateIndexesWithShift(zIndex, id);
-            updateStorageWithNewZIndexes(zIndex);
+            updateStorageAndIndexWithShift(widget);
         }
     }
 
-    private void updateIndexesWithShift(Integer zIndex, UUID id) {
-        List<Integer> updatedIndexes = getUpdatedIndexes(zIndex);
+    private void updateStorageAndIndexWithShift(Widget widget) {
+        int zIndex = widget.getZIndex();
 
-        int start = updatedIndexes.get(0);
-        UUID newValue = id;
-        for (int idx = start; idx < start + updatedIndexes.size(); idx++) {
-            UUID tmp = index.get(idx);
-            index.put(idx, newValue);
-            newValue = tmp;
-        }
-    }
-
-    private void updateStorageWithNewZIndexes(Integer zIndex) {
-        List<Integer> updatedIndexes = getUpdatedIndexes(zIndex);
-        Map<Integer, UUID> map;
-
-        Map.Entry<Integer, UUID> headEntry = index.higherEntry(updatedIndexes.get(updatedIndexes.size() - 1));
-        if (headEntry != null) {
-            map = index.tailMap(zIndex + 1).headMap(headEntry.getKey());
-        } else {
-            map = index.tailMap(zIndex + 1);
-        }
-
-        map.forEach((key, value) -> {
-            Widget oldWidget = storage.get(value);
-            storage.put(value, oldWidget.updateZIndex(key));
-        });
-    }
-
-    //Retrieve list of all incremented indexes
-    private List<Integer> getUpdatedIndexes(Integer zIndex) {
-        List<Integer> indexesToUpdate = StreamUtils.zipWithIndex(index.tailMap(zIndex).keySet().stream())
-                .takeWhile(i -> i.getIndex() + zIndex == i.getValue())
+        List<Map.Entry<Integer, UUID>> entryList = StreamUtils.zipWithIndex(index.tailMap(zIndex).entrySet().stream())
+                .takeWhile(entryIndexed -> entryIndexed.getIndex() + zIndex == entryIndexed.getValue().getKey())
                 .map(Indexed::getValue)
                 .collect(Collectors.toList());
-        indexesToUpdate.add(indexesToUpdate.get(indexesToUpdate.size() - 1) + 1);
 
-        return indexesToUpdate;
+        int shiftedValue = entryList.get(entryList.size() - 1).getKey() + 1;
+        index.put(shiftedValue, null);
+        entryList.add(index.entrySet().stream().filter(it -> it.getKey() == shiftedValue).findFirst().get());
+
+        UUID newValue = widget.getId();
+        int i = 0;
+        do {
+            Map.Entry<Integer, UUID> entry = entryList.get(i);
+            UUID tmp = entry.getValue();
+            entry.setValue(newValue);
+            newValue = tmp;
+
+            Widget oldWidget = storage.get(entry.getValue());
+            storage.put(entry.getValue(), oldWidget.updateZIndex(entry.getKey()));
+            i++;
+        } while (newValue != null);
     }
-
 }

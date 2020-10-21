@@ -1,7 +1,5 @@
 package com.miro.widget.model;
 
-import com.miro.widget.dto.WidgetRequestDTO;
-import com.miro.widget.dto.WidgetResponseDTO;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -19,29 +17,6 @@ public class Widget {
     private Integer width;
     private LocalDateTime lastModified;
 
-    public static Widget fromRequestDTO(WidgetRequestDTO widgetRequestDTO, Integer zIndex) {
-        return new Widget(
-                UUID.randomUUID(),
-                widgetRequestDTO.getCenterX(),
-                widgetRequestDTO.getCenterY(),
-                zIndex,
-                widgetRequestDTO.getHeight(),
-                widgetRequestDTO.getWidth(),
-                LocalDateTime.now()
-        );
-    }
-
-    public WidgetResponseDTO toResponseDTO() {
-        return new WidgetResponseDTO(
-                id,
-                centerX,
-                centerY,
-                zIndex,
-                height,
-                width
-        );
-    }
-
     public Widget updateZIndex(Integer zIndex) {
         return Widget.builder()
                 .id(this.id)
@@ -50,20 +25,19 @@ public class Widget {
                 .zIndex(zIndex)
                 .height(this.height)
                 .width(this.width)
-                .lastModified(LocalDateTime.now())
+                .lastModified(this.lastModified)
                 .build();
     }
 
-    public Widget updateWidget(WidgetRequestDTO widgetRequestDTO, Integer zIndex) {
+    public Widget updateId(UUID id) {
         return Widget.builder()
-                .id(this.id)
-                .centerX(widgetRequestDTO.getCenterX())
-                .centerY(widgetRequestDTO.getCenterY())
-                .zIndex(zIndex)
-                .height(widgetRequestDTO.getHeight())
-                .width(widgetRequestDTO.getWidth())
-                .lastModified(LocalDateTime.now())
+                .id(id)
+                .centerX(this.centerX)
+                .centerY(this.centerY)
+                .zIndex(this.zIndex)
+                .height(this.height)
+                .width(this.width)
+                .lastModified(this.lastModified)
                 .build();
     }
-
 }

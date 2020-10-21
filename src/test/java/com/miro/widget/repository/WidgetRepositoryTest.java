@@ -43,7 +43,7 @@ public class WidgetRepositoryTest {
                 new TreeMap<>(IntStream.range(lowestZIndex, highestZIndex).boxed().collect(Collectors.toMap(Function.identity(), i -> UUID.randomUUID())));
         IntStream.range(lowestZIndex, highestZIndex).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
 
-        Widget newWidget = repository.addWidget(generateWidgetDTO(newZIndex));
+        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), newZIndex));
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex + 1);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex + 1);
@@ -62,6 +62,10 @@ public class WidgetRepositoryTest {
                     Assertions.assertEquals(oldIndex.get(i), index.get(i))
             );
         }
+
+        IntStream.range(lowestZIndex, highestZIndex).forEach(i ->
+                Assertions.assertEquals(storage.get(index.get(i)).getZIndex(), i)
+        );
     }
 
     private static Stream<Arguments> valuesForTestAddWithoutBreaks() {
@@ -82,13 +86,13 @@ public class WidgetRepositoryTest {
         IntStream.range(lowestZIndex, highestZIndex).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
 
         int deltaSize = 5;
-        int delta = new Random().nextInt(10) + 2*deltaSize;
+        int delta = new Random().nextInt(10) + 2 * deltaSize;
 
         oldIndex.putAll(IntStream.range(highestZIndex + delta - deltaSize, highestZIndex + delta).boxed().collect(Collectors.toMap(Function.identity(), i -> UUID.randomUUID())));
         IntStream.range(highestZIndex + delta - deltaSize, highestZIndex + delta).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
 
 
-        Widget newWidget = repository.addWidget(generateWidgetDTO(newZIndex));
+        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), newZIndex));
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex + 1 + deltaSize);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex + 1 + deltaSize);
@@ -113,6 +117,12 @@ public class WidgetRepositoryTest {
                     Assertions.assertEquals(oldIndex.get(i), index.get(i))
             );
         }
+
+        IntStream.range(lowestZIndex, highestZIndex + delta).forEach(i -> {
+            if(index.get(i) != null) {
+                Assertions.assertEquals(storage.get(index.get(i)).getZIndex(), i);
+            }
+        });
     }
 
     //For testing purposes ZIndex should not exceed the highestZIndex value by more than 5
@@ -142,8 +152,8 @@ public class WidgetRepositoryTest {
         int newCenterY = 2;
         int newHeight = 2;
         int newWidth = 2;
-        WidgetRequestDTO newWidgetDTO = new WidgetRequestDTO(newCenterX, newCenterY, newZIndex, newHeight, newWidth);
-        Widget result = repository.updateWidget(widgetId.toString(), newWidgetDTO);
+        Widget newWidget = new Widget(UUID.randomUUID(), newCenterX, newCenterY, newZIndex, newHeight, newWidth, LocalDateTime.now());
+        Widget result = repository.updateWidget(widgetId.toString(), newWidget);
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
@@ -181,8 +191,8 @@ public class WidgetRepositoryTest {
         int newCenterY = 2;
         int newHeight = 2;
         int newWidth = 2;
-        WidgetRequestDTO newWidgetDTO = new WidgetRequestDTO(newCenterX, newCenterY, newZIndex, newHeight, newWidth);
-        Widget result = repository.updateWidget(widgetId.toString(), newWidgetDTO);
+        Widget newWidget = new Widget(UUID.randomUUID(), newCenterX, newCenterY, newZIndex, newHeight, newWidth, LocalDateTime.now());
+        Widget result = repository.updateWidget(widgetId.toString(), newWidget);
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
@@ -221,8 +231,8 @@ public class WidgetRepositoryTest {
         int newCenterY = 2;
         int newHeight = 2;
         int newWidth = 2;
-        WidgetRequestDTO newWidgetDTO = new WidgetRequestDTO(newCenterX, newCenterY, zIndex, newHeight, newWidth);
-        Widget result = repository.updateWidget(widgetId.toString(), newWidgetDTO);
+        Widget newWidget = new Widget(UUID.randomUUID(), newCenterX, newCenterY, zIndex, newHeight, newWidth, LocalDateTime.now());
+        Widget result = repository.updateWidget(widgetId.toString(), newWidget);
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
@@ -245,7 +255,7 @@ public class WidgetRepositoryTest {
         TreeMap<Integer, UUID> oldIndex = new TreeMap<>(IntStream.range(-2, 4).boxed().collect(Collectors.toMap(Function.identity(), i -> UUID.randomUUID())));
         IntStream.range(-2, 4).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
 
-        Widget newWidget = repository.addWidget(generateWidgetDTO(null));
+        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), null));
         int newZIndex = newWidget.getZIndex();
 
         Assertions.assertEquals(storage.size(), 7);
@@ -256,7 +266,7 @@ public class WidgetRepositoryTest {
 
     @Test
     void testAddWidgetWithNullZIndexWhenStorageIsEmpty() {
-        Widget newWidget = repository.addWidget(generateWidgetDTO(null));
+        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), null));
         int newZIndex = newWidget.getZIndex();
 
         Assertions.assertEquals(storage.size(), 1);
@@ -339,9 +349,5 @@ public class WidgetRepositoryTest {
 
     private Widget generateWidget(UUID id, Integer zIndex) {
         return new Widget(id, 1, 1, zIndex, 1, 1, LocalDateTime.now());
-    }
-
-    private WidgetRequestDTO generateWidgetDTO(Integer zIndex) {
-        return new WidgetRequestDTO(1, 1, zIndex, 1, 1);
     }
 }
