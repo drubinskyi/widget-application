@@ -48,12 +48,12 @@ public class WidgetRepository {
 
             Integer oldZIndex = oldWidget.getZIndex();
             Integer newZIndex = newWidget.getZIndex();
-            if (newZIndex == null) {
-                newZIndex = index.lastKey() + 1;
-                newWidget.updateZIndex(newZIndex);
-            }
 
             Widget widget = newWidget.updateId(id);
+            if (newZIndex == null) {
+                newZIndex = index.lastKey() + 1;
+                widget = widget.updateZIndex(newZIndex);
+            }
 
             if (!oldZIndex.equals(newZIndex)) {
                 index.remove(oldZIndex);

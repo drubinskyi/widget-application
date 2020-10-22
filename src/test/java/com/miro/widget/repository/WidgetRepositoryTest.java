@@ -1,7 +1,6 @@
 package com.miro.widget.repository;
 
 import com.codepoetics.protonpack.StreamUtils;
-import com.miro.widget.dto.WidgetRequestDTO;
 import com.miro.widget.error.WidgetNotFoundException;
 import com.miro.widget.model.Widget;
 import org.junit.jupiter.api.Assertions;
@@ -141,6 +140,40 @@ public class WidgetRepositoryTest {
     }
 
     @Test
+    void testAddWidgetWithNullZIndex() {
+        int lowestZIndex = -2;
+        int highestZIndex = 5;
+
+        TreeMap<Integer, UUID> oldIndex = new TreeMap<>(IntStream.range(lowestZIndex, highestZIndex).boxed().collect(Collectors.toMap(Function.identity(), i -> UUID.randomUUID())));
+        IntStream.range(lowestZIndex, highestZIndex).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
+
+        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), null));
+
+        int expectedZIndex = highestZIndex;
+        int actualZIndex = newWidget.getZIndex();
+
+        Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex + 1);
+        Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex + 1);
+
+        Assertions.assertEquals(expectedZIndex, actualZIndex);
+        Assertions.assertEquals(storage.get(newWidget.getId()).getZIndex(), actualZIndex);
+
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
+    }
+
+    @Test
+    void testAddWidgetWithNullZIndexWhenStorageIsEmpty() {
+        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), null));
+        int newZIndex = newWidget.getZIndex();
+
+        Assertions.assertEquals(storage.size(), 1);
+        Assertions.assertEquals(index.size(), 1);
+
+        Assertions.assertEquals(newZIndex, 0);
+        Assertions.assertEquals(storage.get(newWidget.getId()).getZIndex(), newZIndex);
+    }
+
+    @Test
     void testUpdateWidgetWithLowerZIndex() {
         int lowestZIndex = -2;
         int highestZIndex = 5;
@@ -161,14 +194,15 @@ public class WidgetRepositoryTest {
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
+
         Assertions.assertEquals(result.getCenterX(), newCenterX);
         Assertions.assertEquals(result.getCenterY(), newCenterY);
         Assertions.assertEquals(result.getHeight(), newHeight);
         Assertions.assertEquals(result.getWidth(), newWidth);
+        Assertions.assertEquals(result.getZIndex(), newZIndex);
+        Assertions.assertEquals(storage.get(widgetId), result);
 
         Assertions.assertEquals(index.get(newZIndex), widgetId);
-        Assertions.assertEquals(storage.get(widgetId), result);
-        Assertions.assertEquals(result.getZIndex(), newZIndex);
         IntStream.range(lowestZIndex, newZIndex).forEach(i ->
                 Assertions.assertEquals(oldIndex.get(i), index.get(i))
         );
@@ -178,6 +212,8 @@ public class WidgetRepositoryTest {
         IntStream.range(oldZIndex + 1, highestZIndex).forEach(i ->
                 Assertions.assertEquals(oldIndex.get(i), index.get(i))
         );
+
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
     }
 
     @Test
@@ -200,14 +236,15 @@ public class WidgetRepositoryTest {
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
+
         Assertions.assertEquals(result.getCenterX(), newCenterX);
         Assertions.assertEquals(result.getCenterY(), newCenterY);
         Assertions.assertEquals(result.getHeight(), newHeight);
         Assertions.assertEquals(result.getWidth(), newWidth);
+        Assertions.assertEquals(result.getZIndex(), newZIndex);
+        Assertions.assertEquals(storage.get(widgetId), result);
 
         Assertions.assertEquals(index.get(newZIndex), widgetId);
-        Assertions.assertEquals(storage.get(widgetId), result);
-        Assertions.assertEquals(result.getZIndex(), newZIndex);
         IntStream.range(lowestZIndex, oldZIndex).forEach(i ->
                 Assertions.assertEquals(oldIndex.get(i), index.get(i))
         );
@@ -218,6 +255,8 @@ public class WidgetRepositoryTest {
         IntStream.range(newZIndex, highestZIndex).forEach(i ->
                 Assertions.assertEquals(oldIndex.get(i), index.get(i + 1))
         );
+
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
     }
 
     @Test
@@ -240,52 +279,73 @@ public class WidgetRepositoryTest {
 
         Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
         Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
+
         Assertions.assertEquals(result.getCenterX(), newCenterX);
         Assertions.assertEquals(result.getCenterY(), newCenterY);
         Assertions.assertEquals(result.getHeight(), newHeight);
         Assertions.assertEquals(result.getWidth(), newWidth);
+        Assertions.assertEquals(result.getZIndex(), zIndex);
+        Assertions.assertEquals(storage.get(widgetId), result);
 
         Assertions.assertEquals(index.get(zIndex), widgetId);
-        Assertions.assertEquals(storage.get(widgetId), result);
-        Assertions.assertEquals(result.getZIndex(), zIndex);
         IntStream.range(lowestZIndex, highestZIndex).forEach(i ->
                 Assertions.assertEquals(oldIndex.get(i), index.get(i))
         );
-    }
 
-
-    @Test
-    void testAddWidgetWithNullZIndex() {
-        TreeMap<Integer, UUID> oldIndex = new TreeMap<>(IntStream.range(-2, 4).boxed().collect(Collectors.toMap(Function.identity(), i -> UUID.randomUUID())));
-        IntStream.range(-2, 4).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
-
-        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), null));
-        int newZIndex = newWidget.getZIndex();
-
-        Assertions.assertEquals(storage.size(), 7);
-        Assertions.assertEquals(index.size(), 7);
-        Assertions.assertEquals(newZIndex, 4);
-        Assertions.assertEquals(storage.get(newWidget.getId()).getZIndex(), newZIndex);
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
     }
 
     @Test
-    void testAddWidgetWithNullZIndexWhenStorageIsEmpty() {
-        Widget newWidget = repository.addWidget(generateWidget(UUID.randomUUID(), null));
-        int newZIndex = newWidget.getZIndex();
+    void testUpdateWidgetWithNullZIndex() {
+        int lowestZIndex = -2;
+        int highestZIndex = 5;
+        TreeMap<Integer, UUID> oldIndex = new TreeMap<>(IntStream.range(lowestZIndex, highestZIndex).boxed().collect(Collectors.toMap(Function.identity(), i -> UUID.randomUUID())));
+        IntStream.range(lowestZIndex, highestZIndex).forEach(i -> addToStorageAndIndex(oldIndex.get(i), i));
 
-        Assertions.assertEquals(storage.size(), 1);
-        Assertions.assertEquals(index.size(), 1);
-        Assertions.assertEquals(newZIndex, 0);
-        Assertions.assertEquals(storage.get(newWidget.getId()).getZIndex(), newZIndex);
+        int oldZIndex = 0;
+        UUID widgetId = index.get(oldZIndex);
+
+        Integer newZIndex = null;
+        int newCenterX = 2;
+        int newCenterY = 2;
+        int newHeight = 2;
+        int newWidth = 2;
+        Widget newWidget = new Widget(UUID.randomUUID(), newCenterX, newCenterY, newZIndex, newHeight, newWidth, LocalDateTime.now());
+        Widget result = repository.updateWidget(widgetId.toString(), newWidget);
+
+        int expectedZIndex = highestZIndex;
+
+        Assertions.assertEquals(storage.size(), highestZIndex - lowestZIndex);
+        Assertions.assertEquals(index.size(), highestZIndex - lowestZIndex);
+
+        Assertions.assertEquals(result.getCenterX(), newCenterX);
+        Assertions.assertEquals(result.getCenterY(), newCenterY);
+        Assertions.assertEquals(result.getHeight(), newHeight);
+        Assertions.assertEquals(result.getWidth(), newWidth);
+        Assertions.assertEquals(result.getZIndex(), expectedZIndex);
+        Assertions.assertEquals(storage.get(widgetId), result);
+
+        Assertions.assertEquals(index.get(expectedZIndex), widgetId);
+        IntStream.range(lowestZIndex, oldZIndex).forEach(i ->
+                Assertions.assertEquals(oldIndex.get(i), index.get(i))
+        );
+        Assertions.assertNull(index.get(oldZIndex));
+        IntStream.range(oldZIndex + 1, highestZIndex).forEach(i ->
+                Assertions.assertEquals(oldIndex.get(i), index.get(i))
+        );
+
+        storage.forEach((k, v) -> Assertions.assertEquals(k, v.getId()));
     }
-
 
     @Test
     void testGetAll() {
-        IntStream.range(0, 3).forEach(i -> addToStorageAndIndex(UUID.randomUUID(), i));
+        int lowestZIndex = 0;
+        int highestZIndex = 3;
+
+        IntStream.range(lowestZIndex, highestZIndex).forEach(i -> addToStorageAndIndex(UUID.randomUUID(), i));
 
         Collection<Widget> allWidgets = repository.getAllWidgets();
-        Assertions.assertEquals(allWidgets.size(), 3);
+        Assertions.assertEquals(allWidgets.size(), highestZIndex - lowestZIndex);
         StreamUtils
                 .zipWithIndex(allWidgets.stream())
                 .forEach(i ->
